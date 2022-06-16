@@ -485,8 +485,11 @@ public class CommonController {
 			String filename = uploadFile.getOriginalFilename();
 			String savename = filename;
 			String savefile = uploadPath+savename;
-			if(path!=null && path.length()>0) savefile = uploadPath+path+"/"+savename;
-			ret.put("path", savefile);
+			if(path!=null && path.length()>0) {
+				savefile = uploadPath+path+"/"+savename;
+				ret.put("path", path+"/"+savename);
+			}
+			else ret.put("path", savename);
 			File f = new File(savefile);
 			if (f.exists()) f.delete();
 			uploadFile.transferTo(f);
@@ -509,7 +512,7 @@ public class CommonController {
 		ArrayList<String> files = new ArrayList<String>();
 		
 		File chkpath = new File(uploadPath+path);
-		if(chkpath.exists()) chkpath.mkdirs();
+		if(!chkpath.exists()) chkpath.mkdirs();
 		
 		for (MultipartFile uploadFile : fileList) {
 			if (uploadFile != null) {
@@ -523,7 +526,9 @@ public class CommonController {
 				{
 					continue;
 				}
-				files.add(savefile);
+				if(path!=null && path.length()>0) files.add(path+"/"+savename);
+				else files.add(savename);
+					
 				if (f.exists()) f.delete();
 				
 				

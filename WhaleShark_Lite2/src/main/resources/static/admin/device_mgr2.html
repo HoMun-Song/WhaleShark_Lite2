@@ -71,7 +71,19 @@
 			                                    <div class="col-md-9">
 		                                            <input type="text" name="sensors" class="form-control" value="" readonly>
 		                                            <input type="hidden" name="sensorids" class="form-control" value="" readonly>
-		                                            <div class='sensors' style='border:1px solid lightgray; overflow:auto; height:450px;'>
+		                                            <div class='sensors' style='border:1px solid lightgray; overflow:auto; width:180px; height:350px; display:inline-block'>
+		                                            <input type=checkbox id=s1><label for=s1>센서1</label><br>
+		                                            <input type=checkbox id=s2><label for=s2>센서2</label><br>
+		                                            <input type=checkbox id=s3><label for=s3>센서3</label><br>
+		                                            <input type=checkbox id=s4><label for=s4>센서4</label><br>
+		                                            </div>
+		                                            <div class='sensorst' style='overflow:auto; height:350px; display:inline-block'>
+		                                            	  <br>
+		                                            	  <button>추가</button><br><br>
+		                                            	  <button>삭제</button>
+		                                            </div>
+		                                            
+		                                            <div class='sensors1' style='border:1px solid lightgray; overflow:auto; width:170px; height:350px; display:inline-block'>
 		                                            <input type=checkbox id=s1><label for=s1>센서1</label><br>
 		                                            <input type=checkbox id=s2><label for=s2>센서2</label><br>
 		                                            <input type=checkbox id=s3><label for=s3>센서3</label><br>
@@ -133,27 +145,13 @@
 	        				names.push(dev_hash[ids[i]].name);
 	        				sids.push(ids[i]);
         				}
+        				
         				$('[value='+ids[i]+']').prop('checked', true);
         			}
         		
         		$('[name=sensorids]').val(sids.join(","));
         		
         		return names.length>0?names.join(","):"";
-        	}
-        	
-        	function displaysid(ids) 
-        	{
-        		$('span.sid').text('');
-        		if(ids!="")
-       			{
-        			var sids = ids.split(",");
-	        		for(var i=0; i<sids.length; i++)
-		    		{
-		    			var seq = '0000'+(i+1);
-		    			seq = seq.substring(seq.length-4);
-		    			$('[value='+sids[i]+']').next().next().text(seq);
-		    		}
-       			}
         	}
         	
             $(function () {
@@ -168,7 +166,7 @@
                     			{
                     				dev_hash[res.list[i].id] = res.list[i];
                     				if(res.list[i].state=="ACTIVE")
-	    	                			$('.sensors').append('&nbsp;<input name=sensor type=checkbox id=s'+i+' value="'+res.list[i].id+'"><label style="width:130px" for=s'+i+'>&nbsp;'+res.list[i].name+'</label><span class="sid badge badge-info"></span><br>');
+	    	                			$('.sensors').append('&nbsp;<input name=sensor type=checkbox id=s'+i+' value="'+res.list[i].id+'"><label for=s'+i+'>&nbsp;'+res.list[i].name+'</label><br>');
                     			}
                     		}
                     	});
@@ -211,7 +209,6 @@
                     	$('#group-modal [name=bigo]').val('');
                     	$('#group-modal [name=state]').val("ACTIVE");
                     	$('#group-modal').modal({backdrop:'static'});
-                    	displaysid('');
                     });
                 };
                 
@@ -233,8 +230,6 @@
                     	$('#group-modal [name=name]').val(d.name);
                     	$('#group-modal [name=bigo]').val(d.bigo);
                     	$('#group-modal [name=state]').val(d.state);
-
-                		displaysid(d.sensorids);
                     	
                     	$('#group-modal').modal({backdrop:'static'});
                     });
@@ -296,7 +291,7 @@
             		sensors = sensors.split($(this).val()).join('');
             	}
         		$('[name=sensors]').val(sensor_names(sensors));
-        		displaysid(sensors);
+            	
             });
             
             $('#btnSave').click(function() {
@@ -340,9 +335,7 @@
                       	{
                       		if(sids[i]=="") continue; 
 //                      		$.post(App.baseurl+"/insert",{qid:"facilitysensoradd", facilityid:data.id, deviceid:sids[i]});
-				    			var seq = '0000'+(i+1);
-				    			seq = seq.substring(seq.length-4);
-                          	posts.push({url:App.baseurl+"/insert",data:{qid:"devicesensoradd", deviceid:data.id, sensorid:sids[i], sid:seq}});
+                          	posts.push({url:App.baseurl+"/insert",data:{qid:"devicesensoradd", deviceid:data.id, sensorid:sids[i]}});
                       	}
                       	
                       	// 다중 post...
