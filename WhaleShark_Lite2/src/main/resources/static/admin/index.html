@@ -471,6 +471,20 @@
 	            
         	});
         	
+        	// session chk...
+        	var lasttime = (new Date()).getTime();
+        	$(document).mousedown(function() {
+        		var ct = (new Date()).getTime();
+        		
+        		var inttime = (ct - lasttime)/1000;
+        		
+        		if(inttime>60)
+        		{
+        			$.post(App.baseurl+"/login_info", {time:new Date()}).done(function(ret) { if(!ret.success) location.href = "login.html"; });
+        		}
+        		lasttime = ct;
+        	});
+        	
             
         </script>
     </body>
