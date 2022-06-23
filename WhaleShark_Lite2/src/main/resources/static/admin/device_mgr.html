@@ -144,7 +144,7 @@
         	function displaysid(ids) 
         	{
         		$('span.sid').text('');
-        		if(ids!="")
+        		if(ids!==undefined && ids!=null && ids!="")
        			{
         			var sids = ids.split(",");
 	        		for(var i=0; i<sids.length; i++)
