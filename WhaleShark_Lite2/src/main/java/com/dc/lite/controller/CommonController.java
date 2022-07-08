@@ -176,6 +176,161 @@ public class CommonController {
 		
 		return ret;
 	}
+
+	// 파일 목록 서브디렉토리 포함
+	public ArrayList<File> getfileList(String path, ArrayList<File> filelist)
+	{
+		if(filelist==null) filelist = new ArrayList<File>();
+		File cpath = new File(path);
+		if(!cpath.exists()) return filelist;
+		if(!cpath.isDirectory()) {
+			filelist.add(cpath);
+			return filelist;
+		}
+		for(File f:cpath.listFiles())
+		{
+			if(f.isDirectory()) getfileList(path+"/"+f.getName()+"/", filelist);
+			else filelist.add(f);
+		}
+		return filelist;
+	}
+	
+	/*
+	 * 단말 업데이트 정보 api
+	 */
+	
+	@CrossOrigin("*")
+	@RequestMapping(value = "/edgeupdate-info")
+	@ResponseBody
+	public Map edgeupdate_info(HttpServletResponse response, @RequestParam Map<String, String> map) throws Exception {
+		Map ret = new HashMap();
+		ret.put("success", true);
+		
+		String deviceid = (String)map.get("deviceid");
+		String devicetype = (String)map.get("devicetype");
+		String version = (String)map.get("version");
+		
+		String basepath = app_basedir+"update/"+devicetype+"/";
+
+//    	System.out.printf("/edgeupdate-info (%s)...\n", map.toString());
+		
+		HashMap<String, String> sql = new HashMap<String, String>();
+//		sql.put("sql", "select * from tb_device where name='"+deviceid+"' AND state='ACTIVE'");
+		sql.put("sql", "SELECT d.*,m.model_file,m.exec_file,m.apply_time FROM tb_device d LEFT JOIN tb_model_devices md ON d.id = md.did LEFT JOIN tb_model m ON m.id=md.mid AND m.state='ACTIVE' AND m.apply_time<NOW() WHERE d.name='"+deviceid+"' AND d.state='ACTIVE'");
+		List<Object> lst = commonservice.selectsql(sql);
+
+		if(lst.size()<1)
+		{
+			ret.put("success", false);
+			ret.put("error", "device info not found");
+			return ret;
+		}
+		Map row = (Map)lst.get(0);
+		String model_file = (String)row.get("model_file");
+		String exec_file = (String)row.get("exec_file");
+		
+		// SELECT d.*,m.model_file,m.exec_file, m.apply_time FROM tb_device d  LEFT JOIN tb_model_devices md ON d.id = md.did  LEFT JOIN tb_model m ON m.id=md.mid AND m.state='ACTIVE' AND m.apply_time<NOW() WHERE d.name='TS0001' AND d.state='ACTIVE'
+		
+		String qry = String.format("update tb_device set edge_version='%s',edge_type='%s',last_updatetime=now() where name='%s'", version, devicetype, deviceid);
+		
+		sql.put("sql", qry);
+		int res = commonservice.updatesql(sql);
+		
+		ArrayList<File> filelist = new ArrayList<File>();
+		
+		ArrayList<HashMap> flist = new ArrayList<HashMap>();
+		
+		// model file info
+		if(model_file!=null && !model_file.isEmpty())
+		{
+			String path = this.uploadPath+model_file;
+			File f = new File(path);
+			HashMap item = new HashMap();
+			item.put("path", path); //절대경로
+			item.put("destpath", "data/");
+			item.put("filesize", f.length());
+			flist.add(item);
+		}
+		// model exec file info
+		if(exec_file!=null && !exec_file.isEmpty())
+		{
+			String path = this.uploadPath+exec_file;
+			File f = new File(path);
+			HashMap item = new HashMap();
+			item.put("path", path); //절대경로
+			item.put("destpath", "dpm/");
+			item.put("filesize", f.length());
+			flist.add(item);
+		}
+		
+		for(File f:getfileList(basepath,filelist))
+		{
+			HashMap item = new HashMap();
+			item.put("path", f.getPath().replaceFirst(basepath,"")); //상대경로
+//			item.put("dest", basepath);
+			item.put("filesize", f.length());
+			flist.add(item);
+		}
+		
+		ret.put("filelist", flist); // [{path:"fullpath filename", destpath:'저장경로', filesize:0}]
+		
+		return ret;
+	}
+	
+	/*
+	 * 단말 업데이트 파일 download api
+	 */
+	@CrossOrigin("*")
+	@RequestMapping(value = "/edgeupdate-download")
+	@ResponseBody
+	public void edgeupdate_download(HttpServletResponse response, @RequestParam Map<String, String> map) throws Exception {
+		
+		String deviceid = (String)map.get("deviceid");
+		String devicetype = (String)map.get("devicetype");
+		String downloadfile = (String)map.get("downloadfile");
+		
+//    	System.out.printf("/edgeupdate-download (%s)...\n", map.toString());
+
+		String basepath = this.app_basedir+"update/"+devicetype+"/";
+		
+		HashMap<String, String> sql = new HashMap<String, String>();
+		sql.put("sql", "select * from tb_device where name='"+deviceid+"' AND state='ACTIVE'");
+		List<Object> lst = commonservice.selectsql(sql);
+
+		if(lst.size()<1)
+		{
+			if(downloadfile!=null && downloadfile.isEmpty()) response.setStatus(404);
+			System.out.printf("[%s] device not exist", deviceid);
+			
+			return;
+		}
+		
+		if(downloadfile!=null && !downloadfile.isEmpty())
+		{
+			try {
+				String fname = basepath+downloadfile;
+				if(downloadfile.startsWith("/")) fname = downloadfile;
+				
+				File f = new File(fname);
+				if(!f.exists()) // file not exist...
+				{
+					System.out.printf("[%s] file not exist", fname);
+			    	response.setStatus(404);
+					return;
+				}
+				java.io.FileInputStream fis = new java.io.FileInputStream(fname);
+				response.setContentType("application/octect-stream");      
+				response.setHeader("Content-Disposition", "attachment; filename=\""+f.getName()+"\""); 
+		    	response.setStatus(200);
+				org.apache.commons.io.IOUtils.copy(fis, response.getOutputStream());
+				response.flushBuffer();
+		    } catch (IOException e) {
+		    	e.printStackTrace();
+		    	response.setStatus(500);
+			}
+			return;
+		}
+	}	
 	
 	Map<String,Object> g_querys = null;
 	long last_loadtime = -1;
