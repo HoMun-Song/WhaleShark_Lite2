@@ -110,6 +110,7 @@
         });
         
         $('#mtype').change(function() {
+        	
         	$('#user-datatables').DataTable().ajax.reload(null, false);
         });
         
@@ -171,10 +172,11 @@
                         return JSON.stringify( json ); // return JSON string
                     },
                     data: function (d) {
-                    	d.qid = "menulist";
                     	var path = $("#mtype option:selected").attr('path');
                     	d.path = path;
                     	d.find = $('.dataTables_filter input').val();
+                    	
+                    	console.log(d);
     				},
                 },
                 columns: [

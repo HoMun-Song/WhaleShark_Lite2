@@ -952,6 +952,7 @@ public class CommonController {
 		{
 			ret.put("success", false);
 			ret.put("error", "path not found");
+			System.out.printf("[%s] path not found...\n", realpath);
 			return ret;
 		}
 		

@@ -72,7 +72,7 @@
 		                                            <option>csv</option>
 		                                            <option>xls</option>
 		                                            <option>file</option>
-		                                            <option>tsdb</option>
+		                                            <!--<option>tsdb</option>-->
 		                                            <option>rdb</option>
 		                                            </select>
 			                                    </div>
@@ -206,7 +206,10 @@
                     {data: "mstate"}, 
                     {data: "mscheduletype"}, 
                     {data: "wdate", render : function(data, type, row, obj) { return (new Date(data)).format("yyyy-MM-dd HH:mm:ss"); }},
-                    {data: "id", orderable:false, className:'text-center', render : function(data, type, row, obj) { return '<a href="javascript:void(0)" title="삭제" data-id="' + data + '" class="btn btn-xs btn-danger '+ delbtnclass +' delRow"><i class="fa fa-times"></i></a><a href="javascript:void(0)" title="수정" data-id="' + data + '" class="btn btn-xs btn-success editRow"><i class="fa fa-pencil"></i></a>'; }},
+                    {data: "id", orderable:false, className:'text-center', render : function(data, type, row, obj) { 
+					if(data<0) return '자동생성';
+					return '<a href="javascript:void(0)" title="삭제" data-id="' + data + '" class="btn btn-xs btn-danger '+ delbtnclass +' delRow"><i class="fa fa-times"></i></a><a href="javascript:void(0)" title="수정" data-id="' + data + '" class="btn btn-xs btn-success editRow"><i class="fa fa-pencil"></i></a>'; 
+					}},
                 ],
                 paging: true,
                 serverSide: true,
