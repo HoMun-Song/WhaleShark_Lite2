@@ -202,13 +202,14 @@ public class CommonController {
 	@CrossOrigin("*")
 	@RequestMapping(value = "/edgeupdate-info")
 	@ResponseBody
-	public Map edgeupdate_info(HttpServletResponse response, @RequestParam Map<String, String> map) throws Exception {
+	public Map edgeupdate_info(HttpServletResponse response, HttpServletRequest request, @RequestParam Map<String, String> map) throws Exception {
 		Map ret = new HashMap();
 		ret.put("success", true);
 		
 		String deviceid = (String)map.get("deviceid");
 		String devicetype = (String)map.get("devicetype");
 		String version = (String)map.get("version");
+		String remoteip = request.getRemoteAddr();
 		
 		String basepath = app_basedir+"update/"+devicetype+"/";
 
@@ -231,7 +232,7 @@ public class CommonController {
 		
 		// SELECT d.*,m.model_file,m.exec_file, m.apply_time FROM tb_device d  LEFT JOIN tb_model_devices md ON d.id = md.did  LEFT JOIN tb_model m ON m.id=md.mid AND m.state='ACTIVE' AND m.apply_time<NOW() WHERE d.name='TS0001' AND d.state='ACTIVE'
 		
-		String qry = String.format("update tb_device set edge_version='%s',edge_type='%s',last_updatetime=now() where name='%s'", version, devicetype, deviceid);
+		String qry = String.format("update tb_device set edge_version='%s',edge_type='%s',remote_ip='%s',last_updatetime=now() where name='%s'", version, devicetype, remoteip, deviceid);
 		
 		sql.put("sql", qry);
 		int res = commonservice.updatesql(sql);
