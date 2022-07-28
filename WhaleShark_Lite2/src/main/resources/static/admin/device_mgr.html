@@ -133,9 +133,27 @@
         	
         	function edge_info(row)
         	{
-        		if(row.edge_type===undefined || row.edge_type==null) return "정보없음";
-        		else if(row.remote_ip==null) return row.edge_type; 
-        		else return row.edge_type+"("+row.remote_ip+")";
+        		var stat = "";
+        		if(row.edge_type===undefined || row.edge_type==null) stat = "정보없음";
+        		else if(row.remote_ip==null) stat = row.edge_type; 
+        		else stat =  row.edge_type+"("+row.remote_ip+")";
+        		
+        		if(row.first_updatetime!=null && row.last_updatetime!=null)
+        		{
+        			var ts = Math.floor(((new Date(row.last_updatetime)).getTime()-(new Date(row.first_updatetime)).getTime())/1000);
+        			var d = Math.floor(ts/(60*60*24));
+        			var h  = Math.floor((ts % (60*60*24)) / (60*60));
+        			var m  = Math.floor((ts % (60*60)) / 60);
+        			var s = ts % 60;
+        			
+        			var ds = "";
+        			if(d>0) ds += d +"일";
+        			if(h>0) ds += h +"시간";
+        			if(m>0) ds += m +"분";
+        			if(s>0) ds += s +"초";
+        			if(ds!="") stat += ", 운영시간:"+ds;
+        		}
+        		return stat;
         	}
   
         	// 센서id목록을 이름목록으로...
