@@ -26,7 +26,7 @@
                                 <th class="hidden-xs hidden-sm"><i class="fa fa-file"></i> 상태</th>
                                 <th title="동작안함-수신데이터가전혀없을시/수집중/수집멈춤-10분간데이터수신없을시" class="hidden-xs hidden-sm"><i class="fa fa-file"></i> 수집상태</th>
                                 <th class="hidden-xs hidden-sm"><i class="fa fa-file"></i> 단말정보</th>
-                                <th class="hidden-xs hidden-sm"><i class="fa fa-file"></i> 등록일시</th>
+                                <th class="hidden-xs hidden-sm"><i class="fa fa-file"></i> 등록일</th>
                                 <th class="text-center"><i class="fa fa-bolt"></i> Actions</th>
                             </tr>
                         </thead>
@@ -123,13 +123,13 @@
         	}
         	
         	function recv_status(t)
-        	{
-        		if(t===undefined || t==null) return "동작안함";
-        		var dt = (new Date()).getTime() - (new Date(t)).getTime();
-        		if((dt/1000)<600) dt = "수집중";
-        		else dt = "수집멈춤";
-        		return dt;
-        	}
+            {
+                    if(t===undefined || t==null) return "<font color=red style='font-size:12px;font-weight:bold'><i class='fa fa-exclamation-triangle'></i> 동작안함</font>";
+                    var dt = (new Date()).getTime() - (new Date(t)).getTime();
+                    if((dt/1000)<600) dt = "<font color=blue style='font-size:12px;font-weight:bold'><i class='fa fa-play'></i> 수집중</font>";
+                    else dt = "<font color=black style='font-size:12px;font-weight:bold'><i class='fa fa-stop'></i> 수집멈춤</font>";
+                    return dt;
+            }
         	
         	function edge_info(row)
         	{
@@ -287,11 +287,11 @@
                     {orderable:false, className:'text-center', render : function(data, type, row, obj) { return obj.row+1+obj.settings._iDisplayStart; }},
                     {data: "name"},
                     {data: "bigo"}, 
-                    {data: "sensorids", render:function(data, type, row, obj) {return sensor_names(data);}}, 
+                    {data: "sensorids", render:function(data, type, row, obj) {return '<div style="width:500px;overflow: hidden;white-space:nowrap;text-overflow:ellipsis;">'+sensor_names(data)+'</div>'}}, 
                     {data: "state", render : function(data, type, row, obj) { return state_str(data); }},
                     {data: "last_datarecv_time", render : function(data, type, row, obj) { return recv_status(data); }}, 
                     {data: "edge_type", render : function(data, type, row, obj) { return edge_info(row); }}, 
-                    {data: "wdate", render : function(data, type, row, obj) { return (new Date(data)).format("yyyy-MM-dd HH:mm:ss"); }}, 
+                    {data: "wdate", render : function(data, type, row, obj) { return (new Date(data)).format("yyyy-MM-dd"); }}, 
                     {data: "id", orderable:false, className:'text-center', render : function(data, type, row, obj) { return '<a href="javascript:void(0)" title="삭제" data-id="' + data + '" class="btn btn-xs btn-danger '+ delbtnclass +' delRow"><i class="fa fa-times"></i></a><a href="javascript:void(0)" title="수정" data-id="' + data + '" class="btn btn-xs btn-success editRow"><i class="fa fa-pencil"></i></a>'; }},
                 ],
                 paging: true,
