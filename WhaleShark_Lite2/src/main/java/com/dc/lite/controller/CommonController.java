@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
@@ -1029,7 +1030,7 @@ public class CommonController {
 			
 			java.io.FileInputStream fis = new java.io.FileInputStream(filename); 
 			UniversalDetector detector = new UniversalDetector(null);
-			byte[] buf = new byte[4096];
+			byte[] buf = new byte[4096*2];
 			int nread;
 			while ((nread = fis.read(buf)) > 0 && !detector.isDone()) 
 			{ 
@@ -1041,10 +1042,18 @@ public class CommonController {
 			String encoding = detector.getDetectedCharset();
 			
 			if(encoding==null) encoding="UTF-8";			
+
+			String head = new String(buf, nread);
+			int winoffs = 0;
+			int crlf = head.indexOf("\r\n");
+			if(crlf >= 0)
+			{
+//				System.out.printf(">> 윈도 파일\n");
+				winoffs = 1;
+			}
 			
-			FileReader filereader = new FileReader(f);
-			
-			BufferedReader bufReader = new BufferedReader(filereader);
+			BufferedReader bufReader = new BufferedReader(new InputStreamReader(new FileInputStream(filename), encoding));
+//			BufferedReader bufReader = new BufferedReader(filereader);
 			
 			long skipline = 1;
 			long p = 0;
@@ -1057,8 +1066,8 @@ public class CommonController {
 			{
 				if(skipline>0) {
 					skipline--;
-					columns = line.trim();
-					p += line.length()+1;
+					columns = line;
+					p += (line.getBytes().length+1+winoffs); // 윈도 파일일경우
 					continue;
 				}
 				if((lc%blocksize)==0) {
@@ -1066,12 +1075,13 @@ public class CommonController {
 					sp.add(String.format("%d", p));
 				}
 				lc++;
-				p += line.length()+1;
+				p += (line.getBytes().length+1+winoffs); // 윈도 파일일경우
 			}
-			filereader.close();
+//			filereader.close();
 			
 			String lps = String.join(",", sp);
 			ret.put("encoding", encoding);
+			ret.put("lineseparate", winoffs==1?"CRLF":"LF");
 			ret.put("lp", lps);
 			ret.put("linecount", lc);
 			ret.put("blocksize", blocksize);
@@ -1218,8 +1228,9 @@ public class CommonController {
 			RandomAccessFile raf = new RandomAccessFile(realpath, "r");
 			raf.seek(sp);
 			
-//			BufferedReader raf = new BufferedReader(new FileReader(realpath));
-//			raf.skip(sp);
+			// 2022-08-18 encode 수정
+			String encoding = (String)fileobj.get("encoding");
+			if(encoding==null) encoding = "UTF-8";
 			
 			String line;
 			while(offs>0 && (line=raf.readLine())!=null) offs--; //skip...
@@ -1228,7 +1239,9 @@ public class CommonController {
 			List<Object> lst = new ArrayList<Object>();
 			while(length>0 && (line=raf.readLine())!=null) {
 				length--;
-//				line = new String(line.getBytes(),"UTF-8");
+
+				// 2022-08-18 encode 수정
+				line = new String(line.getBytes("ISO-8859-1"), encoding); // randomaccessfile은 iso-8859-1 로 읽어들임..
 				String[] vals = line.split(",");
 				Map item = new HashMap();
 				for(int i=0; i<cols.length; i++) if(i<vals.length) item.put(cols[i], vals[i]);

@@ -390,6 +390,8 @@
 	if(fp>0) retfunc = param.substring(fp+9);
 	
 	$("#login-password").on('keyup', function(e) { if(e.keyCode == 13) $('button.btn-lg').click(); });
+	$("#login-userid").on('keyup', function(e) { if(e.keyCode == 13) $('#login-password').focus(); });
+	window.onload = function() { $("#login-userid").focus(); }
 	
     $(function () {
         var loginButtons = $('#login-buttons');
