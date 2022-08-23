@@ -1067,6 +1067,22 @@ public class CommonController {
 				if(skipline>0) {
 					skipline--;
 					columns = line;
+
+					// 2022-08-22
+					columns = columns.replaceAll(" ", "_");
+					columns = columns.replaceAll("[.]", "_");
+					
+					String[] cols = (String[])columns.split(",");
+					
+					int ec = 0;
+					columns = "";
+					for(int i=0 ;i<cols.length; i++)
+					{
+						if(cols[i].startsWith("\"")) cols[i] = cols[i].substring(1, cols[i].length()-1);
+						if(cols[i].isEmpty()) {cols[i] = "Unnamed:_"+ec; ec++;}
+						
+						columns += (columns.isEmpty()?"":",")+cols[i];
+					}					
 					p += (line.getBytes().length+1+winoffs); // 윈도 파일일경우
 					continue;
 				}
@@ -1216,8 +1232,12 @@ public class CommonController {
 			
 			String[] cols = (String[])columns.split(",");
 			
-//			for(int i=0 ;i<cols.length; i++)
-//				if(cols[i].startsWith("\"")) cols[i] = cols[i].substring(1, cols[i].length()-1);
+			int ec = 0;
+			for(int i=0 ;i<cols.length; i++)
+			{
+				if(cols[i].startsWith("\"")) cols[i] = cols[i].substring(1, cols[i].length()-1);
+				if(cols[i].isEmpty()) {cols[i] = "Unnamed:_"+ec; ec++;}
+			}			
 			
 			String[] sps = (String[])((String)fileobj.get("lp")).split(",");
 			
