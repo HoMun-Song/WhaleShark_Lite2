@@ -106,12 +106,13 @@
 			</tr>
 			<tr>
 			<td colspan=10 style='border:1px solid white;'>
-				<button type="button" class=" W btn btn-success" id='btnAddline' title="라인차트 추가"><i class="fa fa-bar-chart-o"></i> 라인차트 추가</button>
-				<button type="button" class="W btn btn-success" id='btnAddpie' title="파이차트 추가"><i class="fa fa-circle-o-notch"></i> 파이차트 추가</button>
+				<button type="button" class=" W btn btn-success" id='btnAddline' title="라인차트 추가"><i class="fa fa-line-chart"></i> 라인차트 추가</button>
+				<button type="button" class=" W btn btn-success" id='btnAddbar' title="바차트 추가"><i class="fa fa-bar-chart"></i> 바차트 추가</button>
+				<button type="button" class="W btn btn-success" id='btnAddpie' title="파이차트 추가"><i class="fa fa-pie-chart"></i> 파이차트 추가</button>
 
-				<button type="button" class="W btn btn-success" id='btnAddtext' title="Text 추가">Text추가</button>
+				<button type="button" class="W btn btn-success" id='btnAddtext' title="Text 추가"><i class="fa fa-font"></i>Text추가</button>
 				<!-- <button type="button" class="W btn btn-success" id='btnAddsensortext' title="Sensor값 추가">센서값추가</button> -->
-				<button type="button" class="W btn btn-success" id='btnAddBack' title="배경이미지">배경이미지</button>
+				<button type="button" class="W btn btn-success" id='btnAddBack' title="배경이미지"><i class="fa fa-file-image-o"></i> 배경이미지</button>
 				<!-- <button type="button" class="btn btn-success" id='btnMax' title="전체화면"><i class="fa fa-desktop"></i>전체화면</button> -->
 				<button type="button" class="btn btn-default" id='dashboardNew' title="신규"><i class="fa fa-file-o"></i> 신규</button>
 				<button type="button" class="W btn btn-default" id='dashboardSave' title="저장"><i class="fa fa-floppy-o"></i> 저장</button>
@@ -638,6 +639,8 @@ function readdata(mtype, ourl, odatabase, table, filepath, sql, callback, param)
 	else if(mtype=="csv" || mtype=="xls")
 	{
 		gridurl = App.baseurl+'/readcsv';
+		var filepath = sql.split("#")[1];
+		var encoding = sql.split("#")[2];
     	$.post(gridurl, {filepath:filepath,length:10000},function(res) {
     		if(res.success)
     		{
@@ -652,7 +655,7 @@ function readdata(mtype, ourl, odatabase, table, filepath, sql, callback, param)
 }
 
 // chart 추가, id 가 있으면 .. load 
-function addchart(mtype, ourl, odatabase, table, filepath, sql, timer, id, left, top, width, height)
+function addchart(type, mtype, ourl, odatabase, table, filepath, sql, timer, id, left, top, width, height)
 {
 //	if(App.chid==undefined) App.chid = 0;
 // 	if(App.chartobjs==undefined) App.chartobjs = [];
@@ -672,7 +675,7 @@ function addchart(mtype, ourl, odatabase, table, filepath, sql, timer, id, left,
     chartobj.filepath= filepath;
     chartobj.sql = sql;
     chartobj.timer_interval = timer;
-    chartobj.type = "line";
+    chartobj.type = type;
     chartobj.left = left;
     chartobj.top = top;
     chartobj.width = width;
@@ -710,7 +713,7 @@ function addchart(mtype, ourl, odatabase, table, filepath, sql, timer, id, left,
 				}
 			}
 			chartobj.data = {vals:[xvals,yvals],labels:["시간",ylabel]};
-			chartobj.obj = graph(chartobj.id, "line", chartobj.data.vals,chartobj.data.labels);
+			chartobj.obj = graph(chartobj.id, type, chartobj.data.vals,chartobj.data.labels);
 		}
 	}, null);
 	chartobj.timer = null; //setTimeout();
@@ -760,7 +763,7 @@ function refreshchart(chartobj)
 				chartobj.obj.destroy();
 				chartobj.obj = null;
 			}
-			chartobj.obj = graph(chartobj.id, "line", chartobj.data.vals,chartobj.data.labels);
+			chartobj.obj = graph(chartobj.id, chartobj.type, chartobj.data.vals,chartobj.data.labels);
 		}
 		else
 		{
@@ -1023,7 +1026,7 @@ function pie(id, idx, title, maxval, value, chart)
 	return chart;
 }
 
-$('#btnAddline,#btnAddpie').click(function() {
+$('#btnAddline,#btnAddbar,#btnAddpie').click(function() {
 
 	var mname = $('#mtype').val();
 	var columns = $('#columns').val();
@@ -1080,8 +1083,10 @@ $('#btnAddline,#btnAddpie').click(function() {
 	}
 	else if(mtype=="csv"||mtype=="xls")
 	{
+		var cols = columns.split(",");
 		var path = $("#mtype option:selected").attr('path');
-    	filepath = App.loginuserid+"/"+path+"/"+$("#filename").val();
+    	var filepath = path+"/"+$("#filename").val();
+//    	filepath = App.loginuserid+"/"+path+"/"+$("#filename").val();
 		sql = mtype+"#"+filepath+"#"+info_encoding+"#"+cols;
 	}
 	
@@ -1092,7 +1097,12 @@ $('#btnAddline,#btnAddpie').click(function() {
 	}
 	else if($(this).text().indexOf("라인")>=0)
 	{
-		addchart(mtype, ourl, odatabase, mtable, filepath, sql, $('#timer').val());
+		addchart("line", mtype, ourl, odatabase, mtable, filepath, sql, $('#timer').val());
+		return;
+	}
+	else if($(this).text().indexOf("바")>=0)
+	{
+		addchart("bar", mtype, ourl, odatabase, mtable, filepath, sql, $('#timer').val());
 		return;
 	}
 	return;
@@ -1320,7 +1330,8 @@ function updatedashdata(name, data)
 	{
 		var item = lst[i];
 		
-		if(item.type=="line") addchart(item.mtype, item.ourl, item.odatabase, item.table, item.filepath, item.sql, item.timer_interval, item.id, item.left, item.top, item.width, item.height);
+		if(item.type=="line") addchart(item.type, item.mtype, item.ourl, item.odatabase, item.table, item.filepath, item.sql, item.timer_interval, item.id, item.left, item.top, item.width, item.height);
+		else if(item.type=="bar") addchart(item.type, item.mtype, item.ourl, item.odatabase, item.table, item.filepath, item.sql, item.timer_interval, item.id, item.left, item.top, item.width, item.height);
 		else if (item.type=="pie") addpie(item.mtype, item.ourl, item.odatabase, item.table, item.filepath, item.sql, item.timer_interval, item.id, item.left, item.top, item.width, item.height);
 		else if (item.type=="text") addstatictext(item.text, item.id, item.fontattr, item.left, item.top, item.width, item.height);
 		else if (item.type=="sensortext") addtext(item.mtype, item.ourl, item.odatabase, item.table, item.filepath, item.sql, item.timer_interval, item.id, item.text, item.fontattr, item.left, item.top, item.width, item.height);
