@@ -20,6 +20,7 @@
                         <thead>
                             <tr>
                                 <th class="cell-small text-center">#</th>
+                                <th><i class="fa fa-user"></i> 서비스id</th>
                                 <th><i class="fa fa-user"></i> 서비스명</th>
                                 <th class="hidden-xs hidden-sm"><i class="fa fa-envelope-o"></i> 설명</th>
                                 <th class="hidden-xs hidden-sm"><i class="fa fa-envelope-o"></i> 서비스 url</th>
@@ -53,10 +54,16 @@
 			                            <form class="form-horizontal">
 			                                <!-- <h5 class="page-header-sub">사용자정보</h5> -->
 			                                <div class="form-group">
+			                                    <label class="control-label col-md-3">서비스id</label>
+			                                    <div class="col-md-9">
+		                                            <input type="text" name="id" class="form-control" onchange="$(this).val($(this).val().replace(/[^A-Za-z0-9]/ig, ''));" placeholder="영숫자만 입력">
+		                                            <input type="hidden" name="oid" value="">
+			                                    </div>
+			                                </div>
+			                                <div class="form-group">
 			                                    <label class="control-label col-md-3">서비스명</label>
 			                                    <div class="col-md-9">
 		                                            <input type="text" name="name" class="form-control" value="">
-		                                            <input type="hidden" name="id" class="form-control" value="">
 			                                    </div>
 			                                </div>
 	
@@ -156,6 +163,8 @@
                 var addHandle = function () {
                      $("#btnAdd").click(function () {
                     	$('#group-modal .modal-header h4').text('서비스 등록');
+                    	$('#group-modal [name=id]').attr('readonly', false);
+                    	$('#group-modal [name=oid]').val('');
                     	$('#group-modal [name=id]').val('');
                     	$('#group-modal [name=name]').val('');
                     	$('#group-modal [name=svccomment]').val('');
@@ -174,6 +183,8 @@
                     	
                     	$('#group-modal .modal-header h4').text('서비스 정보수정');
                     	
+                    	$('#group-modal [name=id]').attr('readonly', true);
+                    	$('#group-modal [name=oid]').val(d.id);
                     	$('#group-modal [name=id]').val(d.id);
                     	$('#group-modal [name=name]').val(d.name);
                     	$('#group-modal [name=svccomment]').val(d.svccomment);
@@ -205,11 +216,9 @@
                 },
                 columns: [
                     {orderable:false, className:'text-center', render : function(data, type, row, obj) { return obj.row+1+obj.settings._iDisplayStart; }},
+                    {data: "id"},
                     {data: "name"},
                     {data: "svccomment"},
-//                    {data: "model_file", render:function(data, type, row, obj) {return row.model_file+'<br>'+row.exec_file;}},
-//                    {data: "deviceids", render:function(data, type, row, obj) {return device_names(data);}},
-//                    {data: "apply_time", render : function(data, type, row, obj) { return (new Date(data)).format("yyyy-MM-dd HH:mm:ss"); }}, 
                     {data: "id", render : function(data, type, row, obj) { return App.baseurl+"/svc/"+data; }},
                     {data: "state", render : function(data, type, row, obj) { return state_str(data); }},
                     {data: "wtime", render : function(data, type, row, obj) { return (new Date(data)).format("yyyy-MM-dd HH:mm:ss"); }}, 
@@ -231,10 +240,15 @@
             
             $('#btnSave').click(function() {
 
+              if($("#group-modal [name=id]").val()=="")
+                {
+                    App.msg_alert('입력오류', '서비스id를 입력하지 않았습니다.');
+                    return;
+                }
               if($("#group-modal [name=name]").val()=="")
                 {
-                    App.msg_alert('입력오류', '서비스명을 입력하지 않았습니다.');
-                    return;
+                  App.msg_alert('입력오류', '서비스명을 입력하지 않았습니다.');
+                  return;
                 }
               if($('#group-modal [name=svc_file]').val()=="" && $("#group-modal [name=id]").val()=="" )
             	{
@@ -246,12 +260,13 @@
             	var uid = hashcode('model_');
               var url = App.baseurl+"/update";
                 
-                if($("#group-modal [name=id]").val()=="") {
+                if($("#group-modal [name=oid]").val()=="") {
                 	url = App.baseurl+"/insert";
                 	data.qid = "svcmgradd";
-                	data.id = uid;
+                	data.id = $("#group-modal [name=id]").val();
                	}
-                else data.id = $("#group-modal [name=id]").val();
+                else data.id = $("#group-modal [name=oid]").val();
+                
                 
                 data.name = $('#group-modal [name=name]').val();
                 data.svccomment = $('#group-modal [name=svccomment]').val();
@@ -264,7 +279,7 @@
                     {
                       	App.stop_loading();
                      
-                      	var svcid = res.result;
+                      	var svcid = data.id;
                       		// 서비스 파일 업로드 ...
                       	if($('#group-modal [name=svc_file]').val()!="")
                       		{
@@ -291,7 +306,6 @@
 	                					console.log('modelfileupload==>', obj);
 	                					
 	                					var cmds = ["/lite2/shell/svcdeploy.sh", svcid, obj.path[0]];
-//	                					var cmds = ["/python/python","/lite/shell/autoanalysis.py", "-ftype", mtype, "-userid", App.loginuserid, "-q", sql, "-server", host, "-port", port, "-uid", uid, "-pwd", pwd, "-db", db];
 	                					console.log('cmd===>', cmds)
 	                					var d = {};
 	                					d.cmd=cmds.join("@");
@@ -312,16 +326,10 @@
 	                					
 	                					var fdata = {qid:"modelmodelfileupdate", id:data.id, filename:obj.path[0]};
 	                					$.post(App.baseurl+"/update", fdata).done(function(res) {});
-	                					
-//	                					filename update ...
-//                                    App.stop_loading();
-//                                   	$('#upload-modal').modal('hide');
-//                                    App.msg_alert('파일업로드', '파일업로드가 완료되었습니다.', function() {  $('#user-datatables').DataTable().ajax.reload(null, false);});
-	                					
 	                  			  },
 	                			  error: function(jqXHR, textStatus, errorThrown) {
-//	                					loading_stop();
-//	                					alert('데이터 업로드가 실패 하였습니다.');
+	                					loading_stop();
+	                					alert('데이터 업로드가 실패 하였습니다.');
 	                			  }
 	                			});                      		
                       		
