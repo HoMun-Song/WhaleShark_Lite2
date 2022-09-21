@@ -15,9 +15,11 @@ import java.io.RandomAccessFile;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -32,7 +34,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
@@ -535,7 +539,7 @@ public class CommonController {
 		ret.put("success", true);
 		
 		try {
-			HashMap<String, String> sql = new HashMap<String, String>();
+			HashMap<String, Object> sql = new HashMap<String, Object>();
 			
 			String q = getQuery(session, form);
 			if(q.isEmpty())
@@ -547,7 +551,8 @@ public class CommonController {
 	    	System.out.printf("query [%s]\n", q);
 			sql.put("sql", q);
 			int result = commonservice.insertsql(sql);
-			ret.put("result", result);
+			Integer id = (Integer)sql.get("id");
+			ret.put("result", id==null?result:id);
 			sql.remove("sql");
 			ret.put("data", sql);
 		} catch(Exception e) {
@@ -631,6 +636,79 @@ public class CommonController {
 		}
 		return ret;
 	} 
+	
+	public static String[] exec_shell(String[] cmds, File work_dir)
+	{
+		String[] ret = new String[2];
+		
+		ret[0] = "";
+		ret[1] = "";
+		
+		try {
+			
+//			FileWriter fw = new FileWriter("/tmp/shell.log", false) ;
+            
+//            fw.write((new Date())+":"+cmd+"\n");
+//            fw.flush();
+			
+			final StringBuffer buff = new StringBuffer();
+			final StringBuffer errbuff = new StringBuffer();
+			Process p = Runtime.getRuntime().exec(cmds, null, work_dir);
+			final InputStream is = p.getInputStream();
+			OutputStream os = p.getOutputStream();
+			InputStream es = p.getErrorStream();
+			
+			Thread ith = new Thread() {
+
+				@Override
+				public void run() {
+					byte[] tmp = new byte[8192];
+					int rcnt = 0;
+					try{
+						while((rcnt=is.read(tmp))>0){
+							byte[] b = new byte[rcnt];
+							System.arraycopy(tmp, 0,  b,  0, rcnt);
+							buff.append(new String(b, "UTF-8"));
+						}
+					}
+					catch(IOException e) { System.out.printf("is error...:%s\n", "IOError");}
+					catch(Exception e) { System.out.printf("is error...:%s\n", "Error");}
+					
+					super.run();
+				}
+				
+			};
+			ith.start();
+
+			p.waitFor();
+			
+			ith.stop();
+
+			String line;
+			BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+			while ((line = reader.readLine())!= null) buff.append(line+"\n");
+
+			reader = new BufferedReader(new InputStreamReader(es));
+			while ((line = reader.readLine())!= null) errbuff.append(line+"\n");
+			
+//            fw.write((new Date())+":"+buff.toString());
+//            fw.flush();
+//            fw.close(); 
+			
+			ret[0] = buff.toString();
+			ret[1] = errbuff.toString();
+			
+			return ret;
+			
+		} catch (IOException e) {
+			System.out.printf("error:%s\n", "IO Error");
+		} catch (InterruptedException e) {
+			System.out.printf("error:%s\n", "Interrupt Error");
+		} catch (Exception e) {
+			System.out.printf("error:%s\n", "Error");
+		}
+		return ret;
+	}
 	
 	@CrossOrigin("*")
 	@RequestMapping(value = "/uploadfile")
@@ -1380,6 +1458,75 @@ public class CommonController {
 			ret.put("sid_time", session.getLastAccessedTime());
 		}
 		
+		return ret;
+	}
+	
+	@CrossOrigin("*")
+	@RequestMapping(value="/svc/{svcid}", method=RequestMethod.POST)
+	@ResponseBody
+	public Map runsvc(MultipartHttpServletRequest request, @PathVariable("svcid") String svcid, @RequestParam Map<String,Object> param) {
+		Map ret = new HashMap();
+		ret.put("success", true);
+		ret.put("service id", svcid);
+		
+		String userid = (String)param.get("userid");
+		String params = (String)param.get("params");
+		HashMap<String, String> qry = new HashMap<String, String>();
+		try {
+			String tsql = String.format("select * from tb_svcinfo where state='ACTIVE' and id=%s", svcid);
+			qry.put("sql", tsql);
+			List<Object> svcinfo = commonservice.selectsql(qry);
+			
+			if(svcinfo.size()<=0)
+			{
+				ret.put("success", false);
+				ret.put("error", "service id not found");
+				return ret;
+			}
+			Map svcitem =	(Map)svcinfo.get(0);
+
+			ArrayList<String> cmds = new ArrayList<String>();
+			
+			cmds.add(app_basedir+"svc/"+svcid+"/svc.sh");
+
+			String[] pnames = params.split(",");
+			
+			System.out.printf("paramcnt=%d\n", pnames.length);
+			
+			for(String pname:pnames) {
+				String value = ""; 
+				MultipartFile file = request.getFile(pname);
+				if(file!=null) {
+					String filename = file.getOriginalFilename();
+					String ext = "";
+					int pos = filename.lastIndexOf( "." );
+					if(pos>=0) ext = filename.substring( pos );
+					File tempfile = File.createTempFile("temp_", ext, new File(app_basedir+"tmp/"));
+					file.transferTo(tempfile);
+					value = tempfile.getAbsolutePath();
+					// Delete temp flie            
+					tempfile.deleteOnExit();
+				} else {
+					value = request.getParameter(pname);
+				}
+				System.out.printf("param=[%s],value=[%s]\n", pname, file);
+				cmds.add("-"+pname);
+				cmds.add(value);
+			}
+			String[] cmdp = cmds.toArray(new String[1]);
+			String[] log = exec_shell(cmdp, new File(app_basedir+"svc/"+svcid)); // 실행 경로 지정
+			ret.put("result", log[0]);
+			ret.put("errorlog", log[1]);
+			
+			String logsql = String.format("insert tb_svc_history (id,userid,state,run_result,run_log,run_stime,run_etime) values ('%s','%s','success','%s','',now(),now())", svcid, userid, log[0]);
+			
+			qry.put("sql", logsql);
+			int res = commonservice.insertsql(qry);
+			
+		} catch( Exception e) {
+			ret.put("error", e.getMessage());
+			ret.put("success", false);
+		}
 		return ret;
 	}
 	
