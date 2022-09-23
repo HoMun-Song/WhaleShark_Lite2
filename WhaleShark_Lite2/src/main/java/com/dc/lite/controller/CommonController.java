@@ -1469,6 +1469,7 @@ public class CommonController {
 		ret.put("success", true);
 		ret.put("service id", svcid);
 		
+		String remoteip = request.getRemoteAddr();
 		String userid = (String)param.get("userid");
 		String params = (String)param.get("params");
 		HashMap<String, String> qry = new HashMap<String, String>();
@@ -1513,12 +1514,20 @@ public class CommonController {
 				cmds.add("-"+pname);
 				cmds.add(value);
 			}
+			if(!userid.isEmpty())
+			{
+				cmds.add("-userid");
+				cmds.add(userid);
+			}
+			cmds.add("-remoteip");
+			cmds.add(remoteip);
+			
 			String[] cmdp = cmds.toArray(new String[1]);
 			String[] log = exec_shell(cmdp, new File(app_basedir+"svc/"+svcid)); // 실행 경로 지정
 			ret.put("result", log[0]);
 			ret.put("errorlog", log[1]);
 			
-			String logsql = String.format("insert tb_svc_history (id,userid,state,run_result,run_log,run_stime,run_etime) values ('%s','%s','success','%s','',now(),now())", svcid, userid, log[0]);
+			String logsql = String.format("insert tb_svc_history (id,userid,remoteip,state,run_result,run_log,run_stime,run_etime) values ('%s','%s','%s','success','%s','',now(),now())", svcid, userid,remoteip,log[0]);
 			
 			qry.put("sql", logsql);
 			int res = commonservice.insertsql(qry);
