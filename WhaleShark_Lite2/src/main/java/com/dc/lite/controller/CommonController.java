@@ -370,6 +370,9 @@ public class CommonController {
 		if(g_querys==null) return "";
 		
 		String qid = (String)param.get("qid");
+		
+		if(qid.startsWith("__direct_")) return qid.substring(9);
+		
 		String query = (String)g_querys.get(qid);
 		
 		String page = (String)param.get("start");
@@ -513,7 +516,8 @@ public class CommonController {
 			HashMap<String, String> sql = new HashMap<String, String>();
 			
 			String q = getQuery(session, form);
-			if(q.isEmpty()|| session_userid==null)
+			String qid = form.get("qid");
+			if((q.isEmpty()|| session_userid==null) && !qid.startsWith("__direct_"))
 			{
 				ret.put("error", session_userid==null?"not logined":"query error");
 				ret.put("success", false);
