@@ -1478,7 +1478,7 @@ public class CommonController {
 		String params = (String)param.get("params");
 		HashMap<String, String> qry = new HashMap<String, String>();
 		try {
-			String tsql = String.format("select * from tb_svcinfo where state='ACTIVE' and id=%s", svcid);
+			String tsql = String.format("select * from tb_svcinfo where state='ACTIVE' and id='%s'", svcid);
 			qry.put("sql", tsql);
 			List<Object> svcinfo = commonservice.selectsql(qry);
 			
