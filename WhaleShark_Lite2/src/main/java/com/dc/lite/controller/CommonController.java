@@ -1560,19 +1560,6 @@ public class CommonController {
 		return ret;
 	}
 	
-	/*
-	HttpHeaders headers = new HttpHeaders();
-	headers.setContentDisposition(
-	ContentDisposition.builder("attachment")
-		.filename(dto.getFileName(), StandardCharsets.UTF_8)
-		.build());
-	headers.add(HttpHeaders.CONTENT_TYPE, contentType);
-
-	Resource resource = new InputStreamResource(Files.newInputStream(path));
-
-	return new ResponseEntity<>(resource, headers, HttpStatus.OK);
-	*/
-
 	@CrossOrigin("*")
 	@RequestMapping(value="/svc/{svcid}/{path}/{filename}", method=RequestMethod.GET)
 	@ResponseBody
