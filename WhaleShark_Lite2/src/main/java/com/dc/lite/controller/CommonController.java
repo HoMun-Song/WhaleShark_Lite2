@@ -12,6 +12,10 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
@@ -21,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.springframework.core.io.Resource;
+import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
@@ -32,6 +38,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.InputStreamResource;
+
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -1471,7 +1483,7 @@ public class CommonController {
 	public Map runsvc(MultipartHttpServletRequest request, @PathVariable("svcid") String svcid, @RequestParam Map<String,Object> param) {
 		Map ret = new HashMap();
 		ret.put("success", true);
-		ret.put("service id", svcid);
+		ret.put("svcid", svcid);
 		
 		String remoteip = request.getRemoteAddr();
 		String userid = (String)param.get("userid");
@@ -1507,7 +1519,8 @@ public class CommonController {
 					int pos = filename.lastIndexOf( "." );
 					if(pos>=0) ext = filename.substring( pos );
 //					File tempfile = File.createTempFile("temp_", ext, new File(app_basedir+"tmp/"));
-					File tempfile = File.createTempFile("", ext, new File(app_basedir+"tmp/"));
+					File tempfile = new File(app_basedir+"tmp/"+filename);
+//					File tempfile = File.createTempFile("_", ext, new File(app_basedir+"tmp/"));
 					file.transferTo(tempfile);
 					value = tempfile.getAbsolutePath();
 					// Delete temp flie            
@@ -1515,11 +1528,11 @@ public class CommonController {
 				} else {
 					value = request.getParameter(pname);
 				}
-				System.out.printf("param=[%s],value=[%s]\n", pname, file);
+				System.out.printf("param=[%s],value=[%s/%s]\n", pname, value, file);
 				cmds.add("-"+pname);
 				cmds.add(value);
 			}
-			if(!userid.isEmpty())
+			if(userid!=null && !userid.isEmpty())
 			{
 				cmds.add("-userid");
 				cmds.add(userid);
@@ -1532,16 +1545,77 @@ public class CommonController {
 			ret.put("result", log[0]);
 			ret.put("errorlog", log[1]);
 			
-			String logsql = String.format("insert tb_svc_history (id,userid,remoteip,state,run_result,run_log,run_stime,run_etime) values ('%s','%s','%s','success','%s','',now(),now())", svcid, userid,remoteip,log[0]);
+			String result = log[0].replaceAll("'", "`");
+			
+			String logsql = String.format("insert tb_svc_history (id,userid,remoteip,state,run_result,run_log,run_stime,run_etime) values ('%s','%s','%s','success','%s','',now(),now())", svcid, userid,remoteip,result);
 			
 			qry.put("sql", logsql);
 			int res = commonservice.insertsql(qry);
 			
 		} catch( Exception e) {
+			e.printStackTrace();
 			ret.put("error", e.getMessage());
 			ret.put("success", false);
 		}
 		return ret;
 	}
+	
+	/*
+	HttpHeaders headers = new HttpHeaders();
+	headers.setContentDisposition(
+	ContentDisposition.builder("attachment")
+		.filename(dto.getFileName(), StandardCharsets.UTF_8)
+		.build());
+	headers.add(HttpHeaders.CONTENT_TYPE, contentType);
+
+	Resource resource = new InputStreamResource(Files.newInputStream(path));
+
+	return new ResponseEntity<>(resource, headers, HttpStatus.OK);
+	*/
+
+	@CrossOrigin("*")
+	@RequestMapping(value="/svc/{svcid}/{path}/{filename}", method=RequestMethod.GET)
+	@ResponseBody
+	public ResponseEntity<Resource> resourcesvc(/*HttpServletResponse response,*/ @PathVariable("svcid") String svcid, @PathVariable("path") String path, @PathVariable("filename") String filename) {
+		
+		HttpHeaders headers = new HttpHeaders();
+		HashMap<String, String> qry = new HashMap<String, String>();
+		try {
+			
+			Path fpath = Paths.get(app_basedir+"svc/"+svcid+"/"+path+"/"+filename);
+			String contentType = Files.probeContentType(fpath);
+//			headers.setContentDisposition(ContentDisposition.builder("attatchment").filename(filename, StandardCharsets.UTF_8).build());
+			headers.setContentDisposition(ContentDisposition.builder("inline").filename(filename, StandardCharsets.UTF_8).build());
+			headers.add(HttpHeaders.CONTENT_TYPE, contentType);
+			
+			String tsql = String.format("select * from tb_svcinfo where state='ACTIVE' and id='%s'", svcid);
+			qry.put("sql", tsql);
+			List<Object> svcinfo = commonservice.selectsql(qry);
+			
+			if(svcinfo.size()<=0)
+			{
+		    	return new ResponseEntity<>(headers, HttpStatus.BAD_REQUEST);
+			}
+			System.out.printf("resourcesvc2 ==> %s/%s/%s-%s(%s)\n", svcid, path, filename,contentType,app_basedir+"svc/"+svcid+"/"+path+"/"+filename);
+			Resource resource  = new InputStreamResource(Files.newInputStream(fpath));
+			return new ResponseEntity<>(resource, headers, HttpStatus.OK);
+			
+		} catch( Exception e) {
+			e.printStackTrace();
+	    	return new ResponseEntity<>(headers, HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+
+		/*
+			java.io.FileInputStream fis = new java.io.FileInputStream(app_basedir+"svc/"+svcid+"/"+path+"/"+filename);
+			response.setContentType("application/octect-stream");      
+			response.setHeader("Content-Disposition", "attachment; filename=\""+filename+"\""); 
+	    	response.setStatus(200);
+	    	ServletOutputStream  out = response.getOutputStream();
+			org.apache.commons.io.IOUtils.copy(fis, out);
+			fis.close();
+			out.flush();
+			return;
+		*/
+	}	
 	
 }
