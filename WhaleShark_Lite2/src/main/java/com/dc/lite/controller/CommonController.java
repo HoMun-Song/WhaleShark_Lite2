@@ -1518,9 +1518,8 @@ public class CommonController {
 					String ext = "";
 					int pos = filename.lastIndexOf( "." );
 					if(pos>=0) ext = filename.substring( pos );
-//					File tempfile = File.createTempFile("temp_", ext, new File(app_basedir+"tmp/"));
-					File tempfile = new File(app_basedir+"tmp/"+filename);
-//					File tempfile = File.createTempFile("_", ext, new File(app_basedir+"tmp/"));
+					File tempfile = File.createTempFile("temp_", ext, new File(app_basedir+"tmp/"));
+//					File tempfile = new File(app_basedir+"tmp/"+filename);
 					file.transferTo(tempfile);
 					value = tempfile.getAbsolutePath();
 					// Delete temp flie            
